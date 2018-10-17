@@ -25,11 +25,11 @@ example :
 
 ## Very importent :
   
-  We need to install a python Requirement that calls : jicson
-  do it like this :
-    1. need to enter the HomeAssistant enviroment mode 
-    2. run this command :
-        pip3 install jicson
+  We need to install a python Requirement that calls  "jicson"
+  Do it like this :
+  * need to enter the HomeAssistant enviroment mode from console terminal.
+  * run this command : pip3 install jicson 
+        
 
 * First need to create folder "sensor" in your HomeAssistant config/custom_components folder
 * Copy python file "school_holidays.py" to the HA config ./custom_components/sensor folder.
