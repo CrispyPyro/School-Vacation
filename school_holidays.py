@@ -19,7 +19,7 @@ from homeassistant.helpers.entity import Entity
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = datetime.timedelta(minutes=60)
+SCAN_INTERVAL = datetime.timedelta(seconds=60)
 SENSOR_PREFIX = 'School '
 FRIDAY = 'friday'
 
@@ -47,7 +47,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
             SENSOR_TYPES[sensor_type] = [
                 sensor_type.title(), '', 'mdi:flash']
 
-        entities.append(School_holidays(sensor_type, friday))
+        entities.append(School_holidays(hass, sensor_type, friday))
 
     add_entities(entities)
 
@@ -61,15 +61,18 @@ class School_holidays(Entity):
     end = None
     now = datetime.date.today()
     summary_name = None
+    config_path = None
 
-    def __init__(self, sensor_type, friday):
+    def __init__(self, hass, sensor_type, friday):
         """Initialize the sensor."""
         self.type = sensor_type
+        self.config_path = hass.config.path()+"/custom_components/sensor/"
         self.friday = friday
         self._name = SENSOR_PREFIX + SENSOR_TYPES[self.type][1]
         self._icon = SENSOR_TYPES[self.type][0]
         self._state = None
         self.create_db()
+        
 
 
     @property
@@ -117,14 +120,14 @@ class School_holidays(Entity):
             data.pop('DTSTAMP', None)
             data['START'] = data.pop('DTSTART;VALUE=DATE')
             data['END'] = data.pop('DTEND;VALUE=DATE')
-        with codecs.open('scholl.json', 'w', encoding='utf-8') as outfile:
+        with codecs.open(self.config_path+'scholl.json', 'w', encoding='utf-8') as outfile:
             json.dump(result['VEVENT'], outfile, skipkeys=False, ensure_ascii=False,
                       indent=4, separators=None, default=None, sort_keys=True)
         self.run_db()
 
     def run_db(self):
         """upload db from json file."""
-        with open('scholl.json', encoding='utf-8') as data_file:
+        with open(self.config_path+'scholl.json', encoding='utf-8') as data_file:
             data = json.loads(data_file.read())
         self.school_db = data
 
@@ -133,22 +136,24 @@ class School_holidays(Entity):
         if self.school_db is None:
             self.run_db()
         self.now = datetime.date.today()
-        if self.now.isoweekday() != 6 and self.is_friday:
+        if self.now.isoweekday() != 6:
             for extract_data in self.school_db:
                 self.start = datetime.datetime.strptime(str(extract_data['START']), '%Y%m%d').date()
                 self.end = datetime.datetime.strptime(str(extract_data['END']), '%Y%m%d').date()
             if self.start == self.now and self.now < self.end:
                 self.summary_name_set(str(extract_data['SUMMARY']))
                 return 'True'
-        if self.now == 6:
+        elif self.now.isoweekday() == 6:
             self.summary_name_set("יום שבת")
-        else:
-            self.summary_name_set("יום לימודים")
+            return 'True'
+        if self.check_friday() is not False:
+            self.summary_name_set("חופש")
+            return 'True'
+        self.summary_name_set("יום לימודים")
         return 'False'
 
-    def is_friday(self):
+    def check_friday(self):
         """check if need to check for friday also."""
         if self.friday.__eq__("True"):
-            if self.now.isoweekday() == 5:
-                return True
+            return True
         return False
