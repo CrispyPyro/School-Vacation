@@ -30,11 +30,11 @@ example :
 * Copy python file "school_holidays.py" to the HA config ./custom_components/sensor folder.
 * Now you need to add those lines in sensor config :
  ```python
-- platform: school_holidays
-  friday: False
-  resources:
-  - is_vacation
-  - summary
+ - platform: school_holidays
+   friday: False
+   resources:
+     - is_vacation
+     - summary
   ```
   
   ### Entity Requirment
@@ -42,7 +42,16 @@ example :
   friday - set True if your kids learn in friday , else set it false 
   
   ### Sensor Views Options :
-  
+ * in group.yaml:
+ ```python
+  school:
+  name: "מצב לימודים"
+  view: no
+  entities:
+    - sensor.school_summary
+    - input_boolean.school_auto 
+ ```
+ 
  * Or in ui-lovelace.yaml :
  
  ```python
