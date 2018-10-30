@@ -7,8 +7,6 @@ import logging
 import codecs
 import datetime
 import json
-#from time import strptime
-import jicson
 import voluptuous as vol
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 import homeassistant.helpers.config_validation as cv
@@ -16,6 +14,9 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL, CONF_RESOURCES)
 from homeassistant.util import Throttle
 from homeassistant.helpers.entity import Entity
+
+# Home Assistant depends on 3rd party packages for API specific code.
+REQUIREMENTS = ['jicson==1.0.1']
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
 class School_holidays(Entity):
     """Representation of a israel school vaction."""
+    
     school_db = None
     summary_name = None
     config_path = None
@@ -104,6 +106,8 @@ class School_holidays(Entity):
 
     def create_db(self):
         """Create clean DB file."""
+        import jicson
+        
         url = "http://hinuch.education.gov.il/lernet/chufshot.ics?ochlusia=2&chag=1"
         result = jicson.fromWeb(url, "")
         data_parse = str(result)
