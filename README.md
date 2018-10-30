@@ -18,12 +18,6 @@ example :
     service: input_boolean.turn_off
  ```
  ## Guide How to use it
- ## Very importent :
-  
-  We need to install a python Requirement that calls  "jicson"
-  Do it like this :
-  * need to enter the HomeAssistant enviroment mode from console terminal.
-  * run this command : pip3 install jicson 
        
 ### Requirements
  * First need to create folder "sensor" in your HomeAssistant config/custom_components folder
