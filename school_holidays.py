@@ -57,9 +57,6 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 class School_holidays(Entity):
     """Representation of a israel school vaction."""
     school_db = None
-    start = None
-    end = None
-    now = datetime.date.today()
     summary_name = None
     config_path = None
 
@@ -72,8 +69,6 @@ class School_holidays(Entity):
         self._icon = SENSOR_TYPES[self.type][0]
         self._state = None
         self.create_db()
-        
-
 
     @property
     def name(self):
@@ -135,18 +130,18 @@ class School_holidays(Entity):
         """Check if it is school day."""
         if self.school_db is None:
             self.run_db()
-        self.now = datetime.date.today()
-        if self.now.isoweekday() != 6:
+        now = datetime.date.today()
+        if now.isoweekday() != 6:
             for extract_data in self.school_db:
-                self.start = datetime.datetime.strptime(str(extract_data['START']), '%Y%m%d').date()
-                self.end = datetime.datetime.strptime(str(extract_data['END']), '%Y%m%d').date()
-            if self.start == self.now and self.now < self.end:
-                self.summary_name_set(str(extract_data['SUMMARY']))
-                return 'True'
-        elif self.now.isoweekday() == 6:
+                start = datetime.datetime.strptime(str(extract_data['START']), '%Y%m%d').date()
+                end = datetime.datetime.strptime(str(extract_data['END']), '%Y%m%d').date()
+                if start == now < end:
+                    self.summary_name_set(str(extract_data['SUMMARY']))
+                    return 'True'
+        elif now.isoweekday() == 6:
             self.summary_name_set("יום שבת")
             return 'True'
-        if self.check_friday() is not False:
+        if self.check_friday() is not True and now.isoweekday() == 5:
             self.summary_name_set("חופש")
             return 'True'
         self.summary_name_set("יום לימודים")
