@@ -21,7 +21,7 @@ example :
        
 ### Requirements
  * First need to create folder "sensor" in your HomeAssistant config/custom_components folder
-* Copy python file "school_holidays.py" to the HA config ./custom_components/sensor folder.
+* Copy python file "school_holidays.py" to the HA config /custom_components/sensor folder.
 * Now you need to add those lines in sensor config :
  ```python
  - platform: school_holidays
