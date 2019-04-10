@@ -1,5 +1,5 @@
-# School-Vacation with HomeAssistant Sensor Custom Component
-Get School Vacation in HomeAssistant
+# Israel School-Vacation with HomeAssistant Sensor Custom Component
+Get Israel School Vacation in HomeAssistant
  This sensor checks every hour whether it is a day off from school.
 It's very useful if you set a input_bolean in HA cause you can make automation that set if is vacation or not..
 example :
@@ -21,7 +21,7 @@ example :
 ### Requirements
  * First need to create folder "school_holidays" in your HomeAssistant config /custom_components folder
 * Copy python file "sensor.py" to the HA config /custom_components/school_holidays/ folder.
-* Now you need to add those lines in HA sensor.yaml (if you dispated your configs file)  /  configurtion.yaml :
+* Now you need to add those lines in HA sensor.yaml (if you separates your configs file)  /   :
  ```python
  - platform: school_holidays
    friday: False
@@ -29,12 +29,26 @@ example :
      - is_vacation
      - summary
   ```
-  and if you want to use it with input_boolean here is the example :
+  And if you want to use it with input_boolean here is the example to add to input_boolean.yaml file:
   ```python
+  school_auto:
+    name: School Mode
+    icon: mdi:school
+  ```
+  Or if all yours HA configuration in configurtion.yaml file , use this example:
+  ```python
+  sensor:
+    - platform: school_holidays
+      friday: False
+      resources:
+        - is_vacation
+        - summary
+  
   input_boolean:
     school_auto:
       name: School Mode
       icon: mdi:school
+      
   ```
   ### Entity Requirment
   
