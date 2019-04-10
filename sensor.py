@@ -65,7 +65,7 @@ class School_holidays(Entity):
     def __init__(self, hass, sensor_type, friday):
         """Initialize the sensor."""
         self.type = sensor_type
-        self.config_path = hass.config.path()+"/custom_components/sensor/"
+        self.config_path = hass.config.path()+"/custom_components/school_holidays/"
         self.friday = friday
         self._name = SENSOR_PREFIX + SENSOR_TYPES[self.type][1]
         self._icon = SENSOR_TYPES[self.type][0]
