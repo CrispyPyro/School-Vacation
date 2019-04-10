@@ -9,7 +9,6 @@ example :
   trigger: 
   - platform: state
     entity_id: sensor.school_is_vacation
-    from: 'False'
     to: 'True'
   condition: []
   action:
@@ -20,9 +19,9 @@ example :
  ## Guide How to use it
        
 ### Requirements
- * First need to create folder "sensor" in your HomeAssistant config/custom_components folder
-* Copy python file "school_holidays.py" to the HA config /custom_components/sensor folder.
-* Now you need to add those lines in sensor config :
+ * First need to create folder "school_holidays" in your HomeAssistant config /custom_components folder
+* Copy python file "sensor.py" to the HA config /custom_components/school_holidays/ folder.
+* Now you need to add those lines in HA sensor.yaml (if you dispated your configs file)  /  configurtion.yaml :
  ```python
  - platform: school_holidays
    friday: False
@@ -30,7 +29,13 @@ example :
      - is_vacation
      - summary
   ```
-  
+  and if you want to use it with input_boolean here is the example :
+  ```python
+  input_boolean:
+    school_auto:
+      name: School Mode
+      icon: mdi:school
+  ```
   ### Entity Requirment
   
   friday - set True if your kids learn in friday , else set it false 
