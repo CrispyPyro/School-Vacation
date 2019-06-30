@@ -7,6 +7,7 @@ import logging
 import codecs
 import datetime
 import json
+import urllib
 import voluptuous as vol
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 import homeassistant.helpers.config_validation as cv
@@ -106,21 +107,12 @@ class School_holidays(Entity):
 
     def create_db(self):
         """Create clean DB file."""
-        import jicson
-        
-        url = "http://hinuch.education.gov.il/lernet/chufshot.ics?ochlusia=2&chag=1"
-        result = jicson.fromWeb(url, "")
-        data_parse = str(result)
-        data_parse = data_parse.replace("\\r", "").replace("\\u", "")
-        result = eval(data_parse)
-        for data in result['VEVENT']:
-            data.pop('SEQUENCE', None)
-            data.pop('UID', None)
-            data.pop('DTSTAMP', None)
-            data['START'] = data.pop('DTSTART;VALUE=DATE')
-            data['END'] = data.pop('DTEND;VALUE=DATE')
+        with urllib.request.urlopen(
+                    "https://raw.githubusercontent.com/rt400/School-Vacation/master/data.json"
+            ) as data_url:
+                data = json.loads(data_url.read().decode())
         with codecs.open(self.config_path+'scholl.json', 'w', encoding='utf-8') as outfile:
-            json.dump(result['VEVENT'], outfile, skipkeys=False, ensure_ascii=False,
+            json.dump(data, outfile, skipkeys=False, ensure_ascii=False,
                       indent=4, separators=None, default=None, sort_keys=True)
         self.run_db()
 
