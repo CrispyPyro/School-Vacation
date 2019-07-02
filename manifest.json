@@ -4,5 +4,5 @@
   "documentation": "https://github.com/rt400/School-Vacation",
   "dependencies": [],
   "codeowners": ["@yuval_mejahez"],
-  "requirements": ["jicson==1.0.1"]
+  "requirements": []
 }
