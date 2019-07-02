@@ -1,6 +1,11 @@
 # Israel School-Vacation with HomeAssistant Sensor Custom Component
-Get Israel School Vacation in HomeAssistant
- This sensor checks every hour whether it is a day off from school.
+## Get Israel School Vacation in HomeAssistant
+
+This sensor checks whether today is a day off from school or not.
+The sensor is divided into two types, elementary school and high school.
+In Israel, the vacation begins on 22.06 in high school, while in elementary school the vacation begins on 01.07. 
+Therefore there is a separation that allows the creation of separate automations for a school type.
+
 It's very useful if you set a input_bolean in HA cause you can make automation that set if is vacation or not..
 example :
 ```python
@@ -8,7 +13,7 @@ example :
   alias: Set School Mode Off
   trigger: 
   - platform: state
-    entity_id: sensor.school_is_vacation
+    entity_id: sensor.school_is_elementary_vacation
     to: 'True'
   condition: []
   action:
@@ -20,14 +25,16 @@ example :
        
 ### Requirements
  * First need to create folder "school_holidays" in your HomeAssistant config /custom_components folder
-* Copy python file "sensor.py" to the HA config /custom_components/school_holidays/ folder.
+* Copy python file "sensor.py , manifest.json , __init__.py " to the HA config /custom_components/school_holidays/ folder.
 * Now you need to add those lines in HA sensor.yaml (if you separates your configs file)  /   :
  ```python
  - platform: school_holidays
-   friday: False
+   elementary_school: True
+   high_school: True
    resources:
-     - is_vacation
-     - summary
+   - is_high_vacation
+   - is_elementary_vacation
+   - summary
   ```
   And if you want to use it with input_boolean here is the example to add to input_boolean.yaml file:
   ```python
@@ -39,10 +46,12 @@ example :
   ```python
   sensor:
     - platform: school_holidays
-      friday: False
+      elementary_school: True
+      high_school: True
       resources:
-        - is_vacation
-        - summary
+      - is_high_vacation
+      - is_elementary_vacation
+      - summary
   
   input_boolean:
     school_auto:
@@ -52,7 +61,8 @@ example :
   ```
   ### Entity Requirment
   
-  friday - set True if your kids learn in friday , else set it false 
+  elementary_school: get True when vacation and False if not
+  high_school: get True when vacation and False if not
   
   ### Sensor Views Options :
  * in group.yaml:
