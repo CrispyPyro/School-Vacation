@@ -7,144 +7,170 @@ import logging
 import codecs
 import datetime
 import json
+import pathlib
 import urllib
 import voluptuous as vol
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 import homeassistant.helpers.config_validation as cv
-from homeassistant.const import (
-    CONF_SCAN_INTERVAL, CONF_RESOURCES)
-from homeassistant.util import Throttle
+from homeassistant.const import (CONF_RESOURCES)
 from homeassistant.helpers.entity import Entity
-
-# Home Assistant depends on 3rd party packages for API specific code.
-REQUIREMENTS = ['jicson==1.0.1']
+from homeassistant.core import callback
+from homeassistant.helpers.entity import async_generate_entity_id
+from homeassistant.components.sensor import ENTITY_ID_FORMAT
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = datetime.timedelta(seconds=60)
 SENSOR_PREFIX = 'School '
-FRIDAY = 'friday'
+ELEMENTARY_SCHOOL = 'elementary_school'
+HIGH_SCHOOL = 'high_school'
 
 SENSOR_TYPES = {
-    'is_vacation': ['mdi:school', 'is_vacation'],
+    'is_high_vacation': ['mdi:school', 'is_high_vacation'],
+    'is_elementary_vacation': ['mdi:school', 'is_elementary_vacation'],
     'summary': ['mdi:rename-box', 'summary'],
 }
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(FRIDAY): cv.string,
-    vol.Optional(CONF_SCAN_INTERVAL, default=SCAN_INTERVAL): cv.time_period,
+    vol.Required(ELEMENTARY_SCHOOL): cv.string,
+    vol.Required(HIGH_SCHOOL): cv.string,
     vol.Required(CONF_RESOURCES, default=[]):
         vol.All(cv.ensure_list, [vol.In(SENSOR_TYPES)]),
 })
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
+
+async def async_setup_platform(
+        hass, config, async_add_entities, discovery_info=None):
     """Setup the shabbat config sensors."""
-    friday = config.get(FRIDAY)
+    elementary_school = config.get(ELEMENTARY_SCHOOL)
+    high_school = config.get(HIGH_SCHOOL)
     entities = []
 
     for resource in config[CONF_RESOURCES]:
         sensor_type = resource.lower()
-
         if sensor_type not in SENSOR_TYPES:
             SENSOR_TYPES[sensor_type] = [
                 sensor_type.title(), '', 'mdi:flash']
-
-        entities.append(School_holidays(hass, sensor_type, friday))
-
-    add_entities(entities)
+        entities.append(SchoolHolidays(hass, sensor_type, elementary_school, high_school))
+    async_add_entities(entities, False)
 
 
 # pylint: disable=abstract-method
 
-class School_holidays(Entity):
+class SchoolHolidays(Entity):
     """Representation of a israel school vaction."""
-    
-    school_db = None
+    school_db = []
     summary_name = None
     config_path = None
 
-    def __init__(self, hass, sensor_type, friday):
+    def __init__(self, hass, sensor_type, elementary_school, high_school):
         """Initialize the sensor."""
         self.type = sensor_type
-        self.config_path = hass.config.path()+"/custom_components/school_holidays/"
-        self.friday = friday
-        self._name = SENSOR_PREFIX + SENSOR_TYPES[self.type][1]
-        self._icon = SENSOR_TYPES[self.type][0]
+        self.config_path = hass.config.path() + "/custom_components/school_holidays/"
+        self.elementary_school = elementary_school
+        self.high_school = high_school
+        self.entity_id = async_generate_entity_id(
+            ENTITY_ID_FORMAT,
+            '_'.join([SENSOR_PREFIX, SENSOR_TYPES[self.type][1]]), hass=hass)
         self._state = None
-        self.create_db()
+        self._summary_name = None
+        self._elementary_school_status = None
+        self._high_school_status = None
+        self.create_db_file()
 
     @property
     def name(self):
         """Return the name of the sensor."""
-        return self._name
-
-    def summary_name_get(self):
-        """Return the name of the sensor."""
-        self.is_vacation()
-        return self.summary_name
-
-    def summary_name_set(self, string):
-        """Return the name of the sensor."""
-        self.summary_name = string
+        return SENSOR_PREFIX + SENSOR_TYPES[self.type][1]
 
     @property
     def icon(self):
         """Icon to use in the frontend, if any."""
-        return self._icon
+        return SENSOR_TYPES[self.type][0]
 
     @property
     def state(self):
         """Return the state of the sensor."""
         return self._state
 
-    @Throttle(SCAN_INTERVAL)
-    def update(self):
-        """update our sensor state."""
-        if self.type.__eq__('is_vacation'):
-            self._state = self.is_vacation()
-        elif self.type.__eq__('summary'):
-            self._state = self.summary_name_get()
+    async def async_update(self):
+        """Update our sensor state."""
+        if self.school_db:
+            await self.is_vacation()
+            type_to_func = {
+                'is_high_vacation': self.get_high_school_status,
+                'is_elementary_vacation': self.get_elementary_school_status,
+                'summary': self.get_summary_name,
+            }
+            self._state = await type_to_func[self.type]()
+            await self.async_update_ha_state()
+        else:
+            await self.create_db_file()
 
-    def create_db(self):
-        """Create clean DB file."""
-        with urllib.request.urlopen(
-                    "https://raw.githubusercontent.com/rt400/School-Vacation/master/data.json"
-            ) as data_url:
-                data = json.loads(data_url.read().decode())
-        with codecs.open(self.config_path+'scholl.json', 'w', encoding='utf-8') as outfile:
-            json.dump(data, outfile, skipkeys=False, ensure_ascii=False,
-                      indent=4, separators=None, default=None, sort_keys=True)
-        self.run_db()
+    async def create_db_file(self):
+        """Create the json db."""
+        if not pathlib.Path(self.config_path + 'school_data.json').is_file():
+            try:
+                with urllib.request.urlopen(
+                        "https://raw.githubusercontent.com/rt400/School-Vacation/master/data.json"
+                ) as data_url:
+                    data = json.loads(data_url.read().decode())
+                with codecs.open(self.config_path + 'school_data.json', 'w', encoding='utf-8') as outfile:
+                    json.dump(data, outfile, skipkeys=False, ensure_ascii=False,
+                              indent=4, separators=None, default=None, sort_keys=True)
+                self.school_db = data
+            except:
+                self.school_db = []
+        elif not self.school_db:
+            with open(self.config_path + 'school_data.json', encoding='utf-8') as data_file:
+                self.school_db = json.loads(data_file.read())
 
-    def run_db(self):
-        """upload db from json file."""
-        with open(self.config_path+'scholl.json', encoding='utf-8') as data_file:
-            data = json.loads(data_file.read())
-        self.school_db = data
-
-    def is_vacation(self):
+    async def is_vacation(self):
         """Check if it is school day."""
-        if self.school_db is None:
-            self.run_db()
         now = datetime.date.today()
         if now.isoweekday() != 6:
             for extract_data in self.school_db:
-                start = datetime.datetime.strptime(str(extract_data['START']), '%Y%m%d').date()
-                end = datetime.datetime.strptime(str(extract_data['END']), '%Y%m%d').date()
-                if start == now < end:
-                    self.summary_name_set(str(extract_data['SUMMARY']))
-                    return 'True'
+                if "HIGH" in extract_data.values():
+                    start = datetime.datetime.strptime(str(extract_data['START']), '%Y%m%d').date()
+                    end = datetime.datetime.strptime(str(extract_data['END']), '%Y%m%d').date()
+                    if start == now < end:
+                        self._summary_name = "חופש גדול - על יסודי"
+                        self._high_school_status = "True"
+                        self._elementary_school_status = "False"
+                        return True
+                else:
+                    start = datetime.datetime.strptime(str(extract_data['START']), '%Y%m%d').date()
+                    end = datetime.datetime.strptime(str(extract_data['END']), '%Y%m%d').date()
+                    if start == now < end:
+                        self._summary_name = str(extract_data['SUMMARY'])
+                        self._high_school_status = "True"
+                        self._elementary_school_status = "True"
+                        return True
         elif now.isoweekday() == 6:
-            self.summary_name_set("יום שבת")
-            return 'True'
-        if self.check_friday() is not True and now.isoweekday() == 5:
-            self.summary_name_set("חופש")
-            return 'True'
-        self.summary_name_set("יום לימודים")
-        return 'False'
-
-    def check_friday(self):
-        """check if need to check for friday also."""
-        if self.friday.__eq__("True"):
+            self._summary_name = "יום שבת"
+            self._high_school_status = "True"
+            self._elementary_school_status = "True"
             return True
-        return False
+        if self.elementary_school.__eq__("True") and now.isoweekday() == 5:
+            self._high_school_status = "True"
+            self._elementary_school_status = "False"
+            self._summary_name = "אין לימודים - על יסודי"
+            return True
+        self._summary_name = "יום לימודים"
+
+    async def get_summary_name(self):
+        """Return the state of the sensor."""
+        if self._summary_name is None:
+            self._summary_name = "Error"
+        return str(self._summary_name)
+
+    async def get_elementary_school_status(self):
+        """Return the state of the sensor."""
+        if self._elementary_school_status is None:
+            self._elementary_school_status = "Error"
+        return str(self._elementary_school_status)
+
+    async def get_high_school_status(self):
+        """Return the state of the sensor."""
+        if self._high_school_status is None:
+            self._high_school_status = "Error"
+        return str(self._high_school_status)
