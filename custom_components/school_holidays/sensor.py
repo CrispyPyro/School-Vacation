@@ -157,6 +157,8 @@ class SchoolHolidays(Entity):
             self._elementary_school_status = "False"
             self._summary_name = "אין לימודים - על יסודי"
             return True
+        self._high_school_status = "False"
+        self._elementary_school_status = "False"
         self._summary_name = "יום לימודים"
 
     async def get_summary_name(self):
