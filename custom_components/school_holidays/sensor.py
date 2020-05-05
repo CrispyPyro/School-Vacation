@@ -147,7 +147,7 @@ class SchoolHolidays(Entity):
             except Exception as e:
                 _LOGGER.error(e)
 
-    def download_data(self,filename):
+    async def download_data(self,filename):
         """Create the json db."""
         try:
             with urllib.request.urlopen(
