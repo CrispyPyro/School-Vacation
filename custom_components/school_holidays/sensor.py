@@ -8,13 +8,12 @@ import codecs
 import datetime
 import json
 import pathlib
-import urllib
+import aiohttp
 import voluptuous as vol
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 import homeassistant.helpers.config_validation as cv
 from homeassistant.const import (CONF_RESOURCES)
 from homeassistant.helpers.entity import Entity
-from homeassistant.core import callback
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.components.sensor import ENTITY_ID_FORMAT
 
@@ -57,6 +56,11 @@ async def async_setup_platform(
 
 
 # pylint: disable=abstract-method
+
+async def fetch(session, url):
+    async with session.get(url) as response:
+        return await response.text()
+
 
 class SchoolHolidays(Entity):
     """Representation of a israel school vaction."""
@@ -111,53 +115,23 @@ class SchoolHolidays(Entity):
 
     async def create_db_file(self):
         """Create the json db."""
-        data = self.download_data("version")
-        if not pathlib.Path(self.config_path + 'version_data.json').is_file():
-            with codecs.open(self.config_path + 'version_data.json', 'w', encoding='utf-8') as outfile:
-                json.dump(data, outfile, skipkeys=False, ensure_ascii=False,
-                          indent=4, separators=None, default=None, sort_keys=True)
-            self.version_db = data
-        elif not self.version_db:
-            with open(self.config_path + 'version_data.json', encoding='utf-8') as data_file:
-                self.version_db = json.loads(data_file.read())
-        if self.version_db.__eq__(data):
-            if not pathlib.Path(self.config_path + 'school_data.json').is_file():
-                try:
-                    data = self.download_data("data")
+        if not pathlib.Path(self.config_path + 'school_data.json').is_file():
+            try:
+                async with aiohttp.ClientSession() as session:
+                    html = await fetch(session,
+                                       'https://raw.githubusercontent.com/rt400/School-Vacation/master/data.json')
+                    data = json.loads(html)
+                    print(type(data))
                     with codecs.open(self.config_path + 'school_data.json', 'w', encoding='utf-8') as outfile:
                         json.dump(data, outfile, skipkeys=False, ensure_ascii=False,
                                   indent=4, separators=None, default=None, sort_keys=True)
-                    self.school_db = data
-                except Exception as e:
-                    _LOGGER.error(e)
-            elif not self.school_db:
-                with open(self.config_path + 'school_data.json', encoding='utf-8') as data_file:
-                    self.school_db = json.loads(data_file.read())
-        else:
-            with codecs.open(self.config_path + 'version_data.json', 'w', encoding='utf-8') as outfile:
-                json.dump(data, outfile, skipkeys=False, ensure_ascii=False,
-                          indent=4, separators=None, default=None, sort_keys=True)
-            self.version_db = data
-            try:
-                data = self.download_data("data")
-                with codecs.open(self.config_path + 'school_data.json', 'w', encoding='utf-8') as outfile:
-                    json.dump(data, outfile, skipkeys=False, ensure_ascii=False,
-                              indent=4, separators=None, default=None, sort_keys=True)
+
                 self.school_db = data
             except Exception as e:
                 _LOGGER.error(e)
-
-    async def download_data(self,filename):
-        """Create the json db."""
-        try:
-            with urllib.request.urlopen(
-                    "https://raw.githubusercontent.com/rt400/School-Vacation/master/" + str(filename) + ".json"
-            ) as data_url:
-                data = json.loads(data_url.read().decode())
-            return data
-        except Exception as e:
-            _LOGGER.error(e)
-            return []
+        elif not self.school_db:
+            with open(self.config_path + 'school_data.json', encoding='utf-8') as data_file:
+                self.school_db = json.loads(data_file.read())
 
     async def is_vacation(self):
         """Check if it is school day."""
