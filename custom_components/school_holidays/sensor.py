@@ -115,23 +115,17 @@ class SchoolHolidays(Entity):
 
     async def create_db_file(self):
         """Create the json db."""
-        if not pathlib.Path(self.config_path + 'school_data.json').is_file():
-            try:
-                async with aiohttp.ClientSession() as session:
-                    html = await fetch(session,
-                                       'https://raw.githubusercontent.com/rt400/School-Vacation/master/data.json')
-                    data = json.loads(html)
-                    print(type(data))
-                    with codecs.open(self.config_path + 'school_data.json', 'w', encoding='utf-8') as outfile:
-                        json.dump(data, outfile, skipkeys=False, ensure_ascii=False,
-                                  indent=4, separators=None, default=None, sort_keys=True)
-
-                self.school_db = data
-            except Exception as e:
-                _LOGGER.error(e)
-        elif not self.school_db:
-            with open(self.config_path + 'school_data.json', encoding='utf-8') as data_file:
-                self.school_db = json.loads(data_file.read())
+        try:
+            async with aiohttp.ClientSession() as session:
+                html = await fetch(session,
+                                   'https://raw.githubusercontent.com/rt400/School-Vacation/master/data.json')
+                data = json.loads(html)
+                with codecs.open(self.config_path + 'school_data.json', 'w', encoding='utf-8') as outfile:
+                    json.dump(data, outfile, skipkeys=False, ensure_ascii=False,
+                              indent=4, separators=None, default=None, sort_keys=True)
+            self.school_db = data
+        except Exception as e:
+            _LOGGER.error(e)
 
     async def is_vacation(self):
         """Check if it is school day."""
