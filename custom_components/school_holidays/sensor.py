@@ -17,7 +17,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.components.sensor import ENTITY_ID_FORMAT
 
-__version__ = '2.0.0'
+__version__ = '2.0.1'
 
 _LOGGER = logging.getLogger(__name__)
 
