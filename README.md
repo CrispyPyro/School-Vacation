@@ -1,4 +1,4 @@
-# Israel School-Vacation with HomeAssistant Sensor Custom Component
+# Fork of Israel School-Vacation with HomeAssistant Sensor Custom Component for LWSD School District Vacation Dates
 ## Get Israel School Vacation in HomeAssistant
 
 This sensor checks whether today is a day off from school or not.
